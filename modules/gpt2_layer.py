@@ -29,8 +29,14 @@ class GPT2Layer(nn.Module):
         before it is added to the sub-layer input. WE DO NOT APPLY THE LAYER NORM
         IN THIS FUNCTION.
     """
-    ### YOUR CODE HERE
-    raise NotImplementedError
+    # Apply the linear transformation to the sub-layer output
+    transformed = dense_layer(output)  # W * ouput
+    
+    # Apply dropout to the transformed output
+    transformed = dropout(transformed)
+    
+    # Add the residual connection (original input) to the transformed output
+    return input + transformed
 
 
   def forward(self, hidden_states, attention_mask):
@@ -42,6 +48,38 @@ class GPT2Layer(nn.Module):
            - A feed-forward layer that applies transformations to further refine the hidden states.
     """
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
+    # ---- Self-Attention Sub-Layer ----
+    # Apply layer norm to the input
+    normed_hidden_states = self.attention_layer_norm(hidden_states)
+    
+    # Compute multi-headed self-attention using normed hidden states
+    attention_out = self.self_attention(normed_hidden_states, attention_mask)
+    
+    # Combine attention output with original input (residual connection)
+    # Using helper, we apply a linear transformation (attention_dense) and dropout (attention_dropout)
+    # Then add to original hidden_states
+    hidden_states = self.add(
+        input=hidden_states,
+        output=attention_out,
+        dense_layer=self.attention_dense,
+        dropout=self.attention_dropout
+    )
+    
+    # ---- Feed-Forward Sub-Layer ----
+    # Apply layer norm to hidden states
+    normed_hidden_states = self.out_layer_norm(hidden_states)
+    
+    # Pass through intermediate dense layer and apply activation
+    interm_out = self.interm_dense(normed_hidden_states)
+    interm_out = self.interm_af(interm_out)
+    
+    # Use add helper again as above
+    hidden_states = self.add(
+        input=hidden_states,
+        output=interm_out,
+        dense_layer=self.out_dense,
+        dropout=self.out_dropout
+    )
+    
+    return hidden_states
 

@@ -55,7 +55,13 @@ class GPT2SentimentClassifier(torch.nn.Module):
 
     ### TODO: Create any instance variables you need to classify the sentiment of BERT embeddings.
     ### YOUR CODE HERE
-    raise NotImplementedError
+    self.preclassifier = torch.nn.Sequential(
+            torch.nn.Linear(config.hidden_size, config.hidden_size),
+            torch.nn.Tanh(),
+            torch.nn.Dropout(0.1) 
+        )
+    self.classifier = torch.nn.Linear(config.hidden_size, self.num_labels)
+    self.dropout = torch.nn.Dropout(config.hidden_dropout_prob)
 
 
   def forward(self, input_ids, attention_mask):
@@ -65,7 +71,19 @@ class GPT2SentimentClassifier(torch.nn.Module):
     ###       HINT: You should consider what is an appropriate return value given that
     ###       the training loop currently uses F.cross_entropy as the loss function.
     ### YOUR CODE HERE
-    raise NotImplementedError
+    
+    # Feed input into GPT2 to get hidden states
+    outputs = self.gpt(input_ids, attention_mask)
+
+    # Get last token
+    last_token = outputs["last_token"]
+
+    # Pass through preclassifier
+    pre_logits = self.preclassifier(last_token)
+    # Apply dropout again and then pass through classifier to get logits
+    logits = self.classifier(self.dropout(pre_logits))
+
+    return logits
 
 
 
@@ -149,13 +167,13 @@ def load_data(filename, flag='train'):
   num_labels = {}
   data = []
   if flag == 'test':
-    with open(filename, 'r') as fp:
+    with open(filename, 'r', encoding="utf-8") as fp:
       for record in csv.DictReader(fp, delimiter='\t'):
         sent = record['sentence'].lower().strip()
         sent_id = record['id'].lower().strip()
         data.append((sent, sent_id))
   else:
-    with open(filename, 'r') as fp:
+    with open(filename, 'r', encoding="utf-8") as fp:
       for record in csv.DictReader(fp, delimiter='\t'):
         sent = record['sentence'].lower().strip()
         sent_id = record['id'].lower().strip()

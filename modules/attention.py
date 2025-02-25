@@ -32,9 +32,46 @@ class CausalSelfAttention(nn.Module):
     return proj
 
   def attention(self, key, query, value, attention_mask):
+    """
+    key: tensor of shape [bs, num_heads, seq_len, head_dim]
+    query: tensor of shape [bs, num_heads, seq_len, head_dim]
+    value: tensor of shape[bs, num_heads, seq_len, head_dim]
+    attention_mask: tensor of shape [bs, 1, 1, seq_len]
+    """
+    # Compute raw attention scores by taking the dot product between queries and keys
+    # key.transpose(-1, -2) =  [bs, heads, seq_len, head_dim] -> [bs, heads, head_dim, seq_len]
+    scores = torch.matmul(query, key.transpose(-1, -2))
 
-    ### YOUR CODE HERE
-    raise NotImplementedError
+    # Scale the attention scores by sqrt(head_dim)
+    scaling_factor = pow(self.attention_head_size, 0.5)
+    scores = scores / scaling_factor
+
+    # Incorporate the provided attention mask (e.g., to mask padding tokens)
+    scores = scores + attention_mask
+
+    # Create a causal mask to prevent attending to future tokens
+    # This mask is a boolean tensor with True in positions that should be masked
+    seq_length = query.size(-2)
+    causal_mask =  causal_mask = torch.triu(torch.ones(seq_length, seq_length), diagonal=1).bool().to(scores.device)
+    
+    # Apply causal mask
+    # set scores for future positions to -inf
+    scores = scores.masked_fill(causal_mask, float('-inf'))
+
+    # Apply softmax to get attn probabilities
+    attn_probs = torch.nn.functional.softmax(scores, dim=-1)
+
+    # Apply dropout to the attn probabilities
+    attn_probs = self.dropout(attn_probs)
+
+    # Multiply the attn probabilities with the value tensor to get the weighted sum
+    attn_out = torch.matmul(attn_probs, value)
+
+    # Rearrange the tensor from [bs, num_heads, seq_len, head_dim] -> to [batch_size, seq_len, hidden_size]
+    # Here, hidden_size = num_heads * head_dim.
+    attn_out = rearrange(attn_out, 'b h t d -> b t (h d)')
+    
+    return attn_out
 
 
   def forward(self, hidden_states, attention_mask):

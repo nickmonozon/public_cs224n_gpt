@@ -45,7 +45,6 @@ class AdamW(Optimizer):
                 # Access hyperparameters from the `group` dictionary.
                 alpha = group["lr"]
 
-
                 ### TODO: Complete the implementation of AdamW here, reading and saving
                 ###       your state in the `state` dictionary above.
                 ###       The hyperparameters can be read from the `group` dictionary
@@ -61,7 +60,42 @@ class AdamW(Optimizer):
                 ###
                 ###       Refer to the default project handout for more details.
                 ### YOUR CODE HERE
-                raise NotImplementedError
+                
+                # Initialize state if needed
+                if len(state) == 0:
+                    state["step"] = 0
+                    state["exp_avg"] = torch.zeros_like(p.data)
+                    state["exp_avg_sq"] = torch.zeros_like(p.data)
 
+                # Parameters for update
+                exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
+                beta1, beta2 = group["betas"]
+                state["step"] += 1
+                # Current step
+                step = state["step"]
+
+                # Update biased first moment estimate
+                exp_avg.mul_(beta1).add_(grad, alpha=1-beta1)
+
+                # Update biased second moment estimate
+                exp_avg_sq.mul_(beta2).addcmul_(grad, grad, value=1-beta2)
+
+                # Bias correction
+                if group["correct_bias"] == 1:
+                    bias_correction1 = 1 - pow(beta1, step)
+                    bias_correction2 = 1 - pow(beta2, step)
+                    step_size = alpha * math.sqrt(bias_correction2) / bias_correction1
+                else:
+                    step_size = alpha
+
+                # Compute denominator
+                denominator = exp_avg_sq.sqrt().add_(group["eps"])
+
+                # Update parameters
+                p.data.addcdiv_(exp_avg, denominator, value=-step_size)
+
+                # Apply decoupled weight decay 
+                if group["weight_decay"] > 0:
+                    p.data.add_(p.data, alpha=-group["weight_decay"] * group["lr"])
 
         return loss

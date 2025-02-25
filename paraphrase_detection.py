@@ -72,7 +72,17 @@ class ParaphraseGPT(nn.Module):
 
     'Takes a batch of sentences and produces embeddings for them.'
     ### YOUR CODE HERE
-    raise NotImplementedError
+
+    # Pass inputs into GPT2
+    outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
+    
+    # Get last token
+    last_token = outputs["last_token"]  # (batch_size, seq_len, d)
+    
+    # Pass last token through paraphrase detection head
+    logits = self.paraphrase_detection_head(last_token)  # (batch_size, 2)
+    
+    return logits
 
 
 
@@ -125,6 +135,9 @@ def train(args):
       b_mask = b_mask.to(device)
       labels = labels.to(device)
 
+      # Map token IDs to binary class indices
+      labels = torch.where(labels == 8505, torch.tensor(1).to(device), torch.tensor(0).to(device))
+
       # Compute the loss, gradients, and update the model's parameters.
       optimizer.zero_grad()
       logits = model(b_ids, b_mask)
@@ -174,7 +187,7 @@ def test(args):
   print(f"dev paraphrase acc :: {dev_para_acc :.3f}")
   test_para_y_pred, test_para_sent_ids = model_test_paraphrase(para_test_dataloader, model, device)
 
-  with open(args.para_dev_out, "w+") as f:
+  with open(args.para_dev_out, "w+", encoding="utf-8") as f:
     f.write(f"id \t Predicted_Is_Paraphrase \n")
     for p, s in zip(dev_para_sent_ids, dev_para_y_pred):
       f.write(f"{p}, {s} \n")
