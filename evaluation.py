@@ -34,8 +34,8 @@ def model_eval_paraphrase(dataloader, model, device):
     preds = np.argmax(logits, axis=1).flatten()
 
     labels = labels.cpu().numpy()
-    labels = np.where(labels == 8505, 1, labels)  # Convert "yes" token ID (8505) to 1
-    labels = np.where(labels == 3919, 0, labels)  # Convert "no" token ID (3919) to 0
+    labels = np.where(labels == 8505, 1, labels)  # map "yes" token ID (8505) to 1
+    labels = np.where(labels == 3919, 0, labels)  # map "no" token ID (3919) to 0
 
     y_true.extend(labels)
     y_pred.extend(preds)
