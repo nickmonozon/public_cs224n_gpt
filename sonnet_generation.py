@@ -7,6 +7,7 @@ Running:
 trains your SonnetGPT model and writes the required submission files.
 '''
 
+
 import argparse
 import random
 import torch
@@ -26,6 +27,14 @@ from datasets import (
 from models.gpt2 import GPT2Model
 
 from optimizer import AdamW
+
+import sys
+
+# Resolve unicode error
+if sys.platform.startswith('win'):
+    sys.stdout.reconfigure(encoding='utf-8')
+
+
 
 TQDM_DISABLE = False
 
@@ -61,7 +70,13 @@ class SonnetGPT(nn.Module):
     not just the distribution over next tokens for the last token!
     """
     ### YOUR CODE HERE
-    raise NotImplementedError
+    output = self.gpt(input_ids, attention_mask)
+    hidden_states = output['last_hidden_state']
+    batch_size, seq_length, hidden_dim = hidden_states.shape
+    
+    logits = F.linear(hidden_states, self.gpt.word_embedding.weight)
+    
+    return logits
 
 
   def get_device(self):
@@ -80,7 +95,9 @@ class SonnetGPT(nn.Module):
     token_ids = encoding.to(self.get_device())
     attention_mask = torch.ones(token_ids.shape, dtype=torch.int64).to(self.get_device())
 
-
+    # Track generated tokens for repetition penalty
+    generated_tokens = token_ids[0].tolist()  # Start with initial tokens
+    
     for _ in range(max_length):
       # Forward pass to get logits
       logits_sequence = self.forward(token_ids, attention_mask)
@@ -93,7 +110,7 @@ class SonnetGPT(nn.Module):
       sorted_probs, sorted_indices = torch.sort(probs, descending=True)
       cumulative_probs = torch.cumsum(sorted_probs, dim=-1)
       top_p_mask = cumulative_probs <= top_p
-      top_p_mask[..., 1:] = top_p_mask[..., :-1].clone()  # Shift mask right for proper thresholding
+      top_p_mask[..., 1:] = top_p_mask[..., :-1].clone()  # Shift mask right for proper thresholding        
       top_p_mask[..., 0] = True  # Always include the highest probability token
       filtered_probs = sorted_probs * top_p_mask  # Zero out unlikely tokens
       filtered_probs /= filtered_probs.sum(dim=-1, keepdim=True)  # Normalize probabilities
@@ -209,7 +226,7 @@ def generate_submission_sonnets(args):
 
     print(f'{decoded_output}\n\n')
 
-  with open(args.sonnet_out, "w+") as f:
+  with open(args.sonnet_out, "w+", encoding="utf-8") as f:
     f.write(f"--Generated Sonnets-- \n\n")
     for sonnet in generated_sonnets:
       f.write(f"\n{sonnet[0]}\n")
