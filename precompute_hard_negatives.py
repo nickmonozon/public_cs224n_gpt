@@ -23,7 +23,7 @@ def precompute_hard_negatives_full(train_file, output_file, k=4, subset_size=Non
         print(f"Using subset of {len(data)} training examples")
 
     # Data should be list of (s1, s2, label, id)
-    # Step A: Flatten sentences into a single list
+    # Flatten sentences into a single list
     all_sentences = []
     index_map = {}  # (row_id, 's1') -> global_idx, ...
 
@@ -36,14 +36,14 @@ def precompute_hard_negatives_full(train_file, output_file, k=4, subset_size=Non
         all_sentences.append(s2)
         index_map[(ex_idx, 's2')] = i_s2
 
-    # Step B: Build pairs on individual sentence indices
+    # Build pairs on individual sentence indices
     pairs = []
     for ex_idx, (s1, s2, label, sent_id) in enumerate(data):
         i_s1 = index_map[(ex_idx, 's1')]
         i_s2 = index_map[(ex_idx, 's2')]
         pairs.append((i_s1, i_s2, label))
 
-    # Step C: Mine hard negatives
+    # Mine hard negatives
     print(f"Computing hard negatives among {len(all_sentences)} sentences, with {len(pairs)} pairs of interest...")
 
     hard_negatives = mine_hard_negatives(
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("--k", type=int, default=5,
                         help="Number of hard negatives to retrieve for each example.")
     parser.add_argument("--subset_size", type=int, default=1000,
-                        help="Number of training examples to use. Full dataset computation requirements parallelization.")
+                        help="Number of training examples to use. Note that full dataset computation requirements parallelization.")
     args = parser.parse_args()
     
     precompute_hard_negatives_full(args.train_file, args.output_file, args.k, subset_size=args.subset_size)

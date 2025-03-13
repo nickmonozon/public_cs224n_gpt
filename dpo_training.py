@@ -2,7 +2,7 @@
 # dpo_training.py
 
 import sys
-# Make Windows work on UTF-8 characters
+# for training on my computer
 sys.stdout.reconfigure(encoding='utf-8')
 
 import argparse
@@ -131,7 +131,6 @@ def load_sonnets(dev_path):
 
     # Parse sonnet blocks
     while idx < len(lines):
-        # Expect a numeric line as sonnet number.
         num_line = lines[idx].strip()
         if not num_line.isdigit():
             idx += 1
@@ -174,12 +173,12 @@ def generate_predictions(policy_model, args, device):
                 max_new_tokens=args.max_new_tokens
             )
             generated_text = policy_model.tokenizer.decode(generated_ids[0], skip_special_tokens=True)
-            # Remove the prompt if it is repeated in the generated text.
+            # Remove the prompt if it is repeated in the generated text
             if generated_text.startswith(prompt):
                 completion = generated_text[len(prompt):].strip()
             else:
                 completion = generated_text
-            # Format the final output: original sonnet number, the first 3 lines, then the generated continuation.
+            # Final output: original sonnet number, the first 3 lines, then the generated continuation.
             full_output = f"{number}\n{prompt}\n{completion}\n\n"
             f_out.write(full_output)
             print(full_output)
@@ -204,7 +203,6 @@ def get_args():
     parser.add_argument("--use_gpu", action="store_true")
     parser.add_argument("--save_path", type=str, default="dpo_policy_model.pt",
                         help="Path to save the trained policy model.")
-    # Generation hyperparameters:
     parser.add_argument("--max_new_tokens", type=int, default=128,
                         help="Maximum new tokens to generate in dev completions.")
     parser.add_argument("--temperature", type=float, default=0.7,

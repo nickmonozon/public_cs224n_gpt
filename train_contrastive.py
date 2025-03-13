@@ -52,8 +52,8 @@ class ParaphraseGPT(nn.Module):
 
     def forward(self, input_ids, attention_mask):
         """
-        We feed the combined prompt, e.g. "Is s1 a paraphrase of s2? yes/no"
-        The GPT-2 last_token is used for classification.
+        "Is s1 a paraphrase of s2? yes/no"
+        The GPT-2 last_token is used for classification
         """
         outputs = self.gpt(input_ids=input_ids, attention_mask=attention_mask)
         last_token = outputs["last_token"]  # shape [batch_size, d]
@@ -117,33 +117,26 @@ def train(args):
             b_mask = batch["attention_mask"].to(device)    # [batch_size, seq_len]
             labels = batch["labels"].flatten().to(device)  # [batch_size]
 
-            # Hard negatives, if provided by your Dataset:
+            # Hard negatives
             hard_negatives = batch.get("hard_negatives", None)
 
             optimizer.zero_grad()
             logits = model(b_ids, b_mask)  # shape [batch_size, 2]
 
-            # Standard cross-entropy loss
+            # CE loss
             ce_loss = F.cross_entropy(logits, labels, reduction='mean')
 
-            # If you're collecting all anchor embeddings + negative embeddings, do so here
-            # (Currently your code lumps s1/s2 into a single prompt, so "anchor_embeddings"
-            # is just the embedding from that combined input.)
-            # If you want each sample's embedding as an "anchor," you can do:
             anchor_embeddings = model.gpt(b_ids, b_mask)["last_token"]
 
             if hard_negatives:
                 # Build negative embeddings
-                # This is the original approach from your snippet:
-                #   for each example in the batch, we have a list of (s1, s2, label, sent_id)
-                #   then we embed them with GPT-2 (optionally no_grad if you want).
                 hard_neg_embeddings = []
                 hard_neg_labels = []
 
                 for i, neg_samples in enumerate(hard_negatives):
                     if not neg_samples:
                         continue
-                    # neg_samples is something like [(s1_text, s2_text, lbl, sent_id), ...]
+                    # neg_samples format: [(s1_text, s2_text, lbl, sent_id), ...]
                     neg_sent1 = [s[0] for s in neg_samples]
                     neg_sent2 = [s[1] for s in neg_samples]
                     neg_labels = [s[2] for s in neg_samples]
@@ -184,7 +177,7 @@ def train(args):
                 else:
                     loss = ce_loss
             else:
-                # No hard negatives? Then just CE
+                # If no hard negatives (non-paraprhases), just CE loss
                 loss = ce_loss
 
             loss.backward()

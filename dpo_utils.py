@@ -10,6 +10,9 @@ import numpy as np
 import random
 
 def dpo_loss(policy_model, ref_model, batch, beta=0.1):
+    '''
+    DPO loss according to https://arxiv.org/abs/2305.18290
+    '''
     with torch.no_grad():
         ref_logprob_winner = ref_model.compute_logprob_sum(batch['winner_ids'], batch['winner_mask'])
         ref_logprob_loser  = ref_model.compute_logprob_sum(batch['loser_ids'], batch['loser_mask'])
@@ -21,6 +24,9 @@ def dpo_loss(policy_model, ref_model, batch, beta=0.1):
     return loss
 
 def seed_everything(seed=11711):
+    '''
+    Seed function for reproducibility
+    '''
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
